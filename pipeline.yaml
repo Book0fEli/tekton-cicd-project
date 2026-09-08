@@ -1,0 +1,68 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:  
+  name: hello-pipeline
+spec:
+  params:
+    - name: message
+  tasks:
+    - name: hello
+      taskRef:
+        name: echo
+      params:
+        - name: message
+          value: $(params.message)
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: cd-pipeline
+spec:
+  params:
+    - name: repo-url
+    - name: branch
+      default: "master"
+  tasks:
+    - name: clone
+      taskRef:
+        name: checkout
+      params:
+        - name: repo-url
+          value: $(params.repo-url)
+        - name: branch
+          value: $(params.branch)
+    - name: lint
+      runAfter: [clone]
+      taskRef:
+        name: echo
+      params:
+        - name: message
+          value: "Linting code with CheckStyle..."
+    - name: tests
+      runAfter: [lint]
+      taskRef:
+        name: echo
+      params:
+        - name: message
+          value: "Running unit tests with Junit..."
+    - name: setup-maven
+      runAfter: [tests]
+      taskRef:
+        name: echo
+      params:
+        - name: message
+          value: "Setting up Maven..."
+    - name: build
+      runAfter: [setup-maven]
+      taskRef:
+        name: echo
+      params:
+        - name: message
+          value: "Building image for $(params.repo-url) ..."
+    - name: deploy
+      runAfter: [build]
+      taskRef:
+        name: echo
+      params:
+        - name: message
+          value: "Deploying $(params.branch) branch of $(params.repo-url) ..."
